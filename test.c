@@ -21,6 +21,7 @@
 struct entry {
   const char *symbol;
   long weight;
+  int code;
 };
 
 int compare_entries(const void *v1, const void *v2) {
@@ -33,23 +34,33 @@ int compare_entries(const void *v1, const void *v2) {
 void disp_array(const char *msg, struct entry *A, int n) {
   printf("%s\n", msg);
   for (int i = 0; i < n; ++i) {
-    printf ("%s\t%ld\t"_BITS"\n", A[i].symbol,
-            A[i].weight, TO_BITS(A[i].weight));
+    printf ("%s\t%ld\n", A[i].symbol, A[i].weight);
   }
   printf("\n\n");
 }
 
+void disp_code(struct entry *A, int n) {
+  for (int i = 0; i < n; ++i) {
+    printf ("%s\t", A[i].symbol);
+    for (int j = A[i].weight-1; j >= 0; j--) {
+      putchar(A[i].code & (1 << j) ? '1' : '0');
+    }
+    putchar('\n');
+  }
+  /* printf("\n\n"); */
+}
+
 void calc_codes(struct entry *A, int n) {
     int i;
-    disp_array("begin", A, n);
+    /* disp_array("begin", A, n); */
 
     // Phase 1
     int s,r,t;
     for(s=0, r=0, t=0; t < n-1; t++) {
-        if (t == 3)
-          disp_array("t=3", A, n);
+        /* if (t == 3) */
+        /*   disp_array("t=3", A, n); */
 
-        if(s>n || (r<t && A[r].weight < A[s].weight)) {
+        if(s>=n || (r<t && A[r].weight < A[s].weight)) {
             A[t].weight = A[r].weight;
             A[r].weight = t;
             r++;
@@ -61,7 +72,7 @@ void calc_codes(struct entry *A, int n) {
             s++;
         }
 
-        if(s>n || (r<t && A[r].weight < A[s].weight)) {
+        if(s>=n || (r<t && A[r].weight < A[s].weight)) {
           A[t].weight += A[r].weight;
           A[r].weight = t;
           r++;
@@ -74,36 +85,33 @@ void calc_codes(struct entry *A, int n) {
         }
     }
 
-    disp_array("Phase 1", A, n);
+    /* printf("s %d t %d\n", n-s+1, n-t); */
 
+    /* disp_array("Phase 1", A, n); */
+
+    int level_top = n - 2; //root
     int depth = 1;
-    int a = 1, u = 0, d = 0, x = n;
+    i = n;
+    int j, k;
 
-    A[n-1].weight = 0;
-    for (t = n-2; t >= 0; t--) {
-      A[t].weight = A[A[t].weight].weight + 1;
+    int total_nodes_at_level = 2;
+    while(i > 0) {
+      for(k=level_top; k>0 && A[k-1].weight >=level_top; k--) {}
+
+      int internal_nodes_at_level = level_top - k;
+      int leaves_at_level = total_nodes_at_level - internal_nodes_at_level;
+      for(j=0; j<leaves_at_level; j++) {
+        A[--i].weight = depth;
+      }
+
+      total_nodes_at_level = internal_nodes_at_level * 2;
+      level_top = k;
+      depth++;
     }
 
-    while (a > 0) {
-      while (t >= 0 && A[t].weight == d) {
-        u++;
-        t--;
-      }
-      while (a > u) {
-        A[x--].weight = d;
-        a--;
-      }
-      a = 2*u;
-      d++;
-      u = 0;
-    }
-
-    disp_array("Code lengths", A, n);
+    /* disp_array("Code lengths", A, n); */
 
     int max_len = depth-1;
-
-    int *base = malloc(sizeof(*base) * n);
-    int *offset = malloc(sizeof(*offset) * n);
 
     // kraft check
     double kraft = 0;
@@ -112,21 +120,20 @@ void calc_codes(struct entry *A, int n) {
     }
 
     fprintf(stderr, "kraft check: %f\n", kraft);
-    assert(kraft == 1);
+
+    fprintf(stderr, "max_len: %d\n", max_len);
 
     for (i = 0; i < n; ++i) {
       int len = A[i].weight;
 
       int maxsum = 0;
-      for (int j = 0; j <= i-1; ++j) {
+      for (int j = 0; j < i; ++j) {
         maxsum += 2 << (max_len - A[j].weight);
       }
 
       int nbits = (1 << (len+1))-1;
-      A[i].weight = (maxsum/(2 << (max_len - len))) & nbits;
+      A[i].code = (maxsum / (2 << (max_len - len))) & nbits;
     }
-
-    free(base);
 }
 
 
@@ -152,7 +159,7 @@ int main(int argc, char *argv[]) {
   }
 
   int count = hash_size(hash);
-  size_t alloc = sizeof(*entries) * count;
+  size_t alloc = sizeof(struct entry) * count;
 
   entries = malloc(alloc);
   memset(entries, 0, alloc);
@@ -161,27 +168,17 @@ int main(int argc, char *argv[]) {
 
   hash_each(hash, {
       struct entry entry;
-
-      printf("key '%s'\n", key);
       entry.symbol = key;
       entry.weight = (long)val;
       entries[c++] = entry;
   });
 
-  /* qsort(entries, count, sizeof(*entries), compare_entries); */
+  qsort(entries, count, sizeof(*entries), compare_entries);
 
   calc_codes(entries, count);
-  disp_array("codes", entries, count);
+  disp_code(entries, count);
 
-  /* for (int i = 0; i < count; ++i) { */
-  /*   struct entry *entry = &entries[i]; */
-
-  /*   int code_len = ceil(1.4404 * log(entry->weight / total) / log(2)); */
-  /*   if (code_len > max_code_len) */
-  /*     max_code_len = code_len; */
-  /* } */
-
-  free(entries);
+  //free(entries);
 
   fclose(input);
 
