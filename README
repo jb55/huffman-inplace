@@ -1,0 +1,21 @@
+
+huffi
+=====
+
+    $ <test.c node tokenize-c.js | ./huffi | column -t -s $'\t'
+    line comment   000000000
+    quote          000000001
+    directive      00000001
+    line continue  00000010
+    area comment   00000011
+    char           000001
+    close curly    000010
+    open curly     000011
+    close square   000100
+    open square    000101
+    number         00011
+    close paren    0010
+    open paren     0011
+    operator       01
+    identifier     10
+    whitespace     11
