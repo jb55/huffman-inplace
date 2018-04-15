@@ -119,9 +119,9 @@ void calc_codes(struct entry *A, int n) {
       kraft += pow(2.0, -A[i].weight);
     }
 
-    fprintf(stderr, "kraft check: %f\n", kraft);
+    /* fprintf(stderr, "kraft check: %f\n", kraft); */
 
-    fprintf(stderr, "max_len: %d\n", max_len);
+    /* fprintf(stderr, "max_len: %d\n", max_len); *\/ */
 
     for (i = 0; i < n; ++i) {
       int len = A[i].weight;
